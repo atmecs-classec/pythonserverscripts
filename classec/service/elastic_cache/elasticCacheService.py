@@ -18,7 +18,8 @@ def ToCheckForNextMarker(retrieveNextElastiCache):
 def ToLoadDataOntoFile(Datatoload):
     # Initialize all the variable which will hold json values
     ListOfAllElastiCacheClusters = Datatoload['CacheClusters']  # getting all elasticache
-
+    counter = 0
+    recordBuilder = list()
     print'length of all elasticache ' + str(len(ListOfAllElastiCacheClusters))
     for ElastiCache in ListOfAllElastiCacheClusters:
         if 'CacheClusterId' in ElastiCache:
@@ -116,13 +117,22 @@ def ToLoadDataOntoFile(Datatoload):
                     if 'Status' == key:
                         Status = value
 
-
-        session.add(elasticCacheModel(CacheClusterId,CacheClusterCreateTime,CacheClusterStatus,CacheNodeType,
+        counter = counter + 1
+        record = elasticCacheModel(CacheClusterId,CacheClusterCreateTime,CacheClusterStatus,CacheNodeType,
                                       CacheSubnetGroupName,ClientDownloadLandingPage,Engine, EngineVersion,NumCacheNodes,
                                       PreferredMaintenanceWindow,PreferredAvailabilityZone,ReplicationGroupId,
                                       SnapshotRetentionLimit, SnapshotWindow, AutoMinorVersionUpgrade,
-                                      CacheParameterGroupName, ParameterApplyStatus, SecurityGroupId, Status))
+                                      CacheParameterGroupName, ParameterApplyStatus, SecurityGroupId, Status)
+        recordBuilder.append(record)
 
+        if 500 == counter:
+            session.bulk_save_objects(recordBuilder)
+            session.commit()
+            counter = 0
+            recordBuilder = []
+
+    session.bulk_save_objects(recordBuilder)
+    session.commit()
 
 
 if __name__ == '__main__':

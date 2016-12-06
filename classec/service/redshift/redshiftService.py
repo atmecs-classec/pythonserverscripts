@@ -18,6 +18,8 @@ def ToCheckForNextMarker(retrieveNextCluster):
 def ToLoadDataOntoFile(Datatoload):
     ListOfAllCluster = Datatoload['Clusters']  # getting all instances
     print(len(ListOfAllCluster))
+    counter = 0
+    recordBuilder = list()
     for cluster in ListOfAllCluster:
         ClusterID = cluster['ClusterIdentifier']
         allowVersionUpgrade = cluster['AllowVersionUpgrade']
@@ -75,12 +77,22 @@ def ToLoadDataOntoFile(Datatoload):
             elif tags['Key'] == 'Country':
                 tags_Country = tags['Value']
 
-        session.add(redshiftModel(ClusterID,allowVersionUpgrade,automatedSnapshotRetentionPeriod,availabilityZone,
+        counter = counter + 1
+        record = redshiftModel(ClusterID,allowVersionUpgrade,automatedSnapshotRetentionPeriod,availabilityZone,
                                   clusterCreateTime,clusterRevisionNumber,clusterStatus, clusterSubnetGroupName,
                                   clusterVersion, dbName, encrypted,enhancedVpcRouting,nodeType, numberOfNodes,
                                   preferredMaintenanceWindow,vpcId,nodeRole, parameterApplyStatus,tags_Name, tags_Env,
-                                  tags_Brand, tags_Service, tags_Segment, tags_Domain, tags_Role, tags_Country))
+                                  tags_Brand, tags_Service, tags_Segment, tags_Domain, tags_Role, tags_Country)
+        recordBuilder.append(record)
 
+        if 500 == counter:
+            session.bulk_save_objects(recordBuilder)
+            session.commit()
+            counter = 0
+            recordBuilder = []
+
+    session.bulk_save_objects(recordBuilder)
+    session.commit()
 
 if __name__ == '__main__':
     start_time = timeit.default_timer()

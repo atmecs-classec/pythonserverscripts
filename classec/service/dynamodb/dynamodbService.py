@@ -17,7 +17,8 @@ def ToCheckForNextTable(AllTables):
 
 def loadData(AllTableData):
     # Initialize all the variable which will hold json values
-
+    counter = 0
+    recordBuilder = list()
     print'length of table ' + str(len(AllTableData['Table']))
     table = AllTableData['Table']
     TableName = ''
@@ -70,13 +71,20 @@ def loadData(AllTableData):
                 else:
                     print ''
 
-        print(TableName,TableStatus ,TableArn ,TableSizeBytes ,ItemCount ,CreationDateTime ,
+        counter = counter + 1
+        record = dynamodbModel(TableName,TableStatus ,TableArn ,TableSizeBytes ,ItemCount ,CreationDateTime ,
                                   LastIncreaseDateTime ,LastDecreaseDateTime ,NumberOfDecreasesToday ,ReadCapacityUnits,
                                   WriteCapacityUnits)
-        session.add(dynamodbModel(TableName,TableStatus ,TableArn ,TableSizeBytes ,ItemCount ,CreationDateTime ,
-                                  LastIncreaseDateTime ,LastDecreaseDateTime ,NumberOfDecreasesToday ,ReadCapacityUnits,
-                                  WriteCapacityUnits))
+        recordBuilder.append(record)
 
+        if 500 == counter:
+            session.bulk_save_objects(recordBuilder)
+            session.commit()
+            counter = 0
+            recordBuilder = []
+
+    session.bulk_save_objects(recordBuilder)
+    session.commit()
 
 
 if __name__ == '__main__':

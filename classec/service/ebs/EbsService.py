@@ -15,14 +15,14 @@ def ToCheckForNextMarker(retrieveNextEbs):
 
 
 def insertEbsStaticWithCost(ebsObject):
-    session.add(ebsObject)
-
+    session.bulk_save_objects(ebsObject)
+    session.commit()
 
 def ToLoadDataOntoFile(Datatoload):
     ListOfAllVol = Datatoload['Volumes']  # getting all instances
-
-
     print(len(ListOfAllVol))
+    counter = 0
+    recordBuilder = list()
     for vol in ListOfAllVol:
         ebs_vid = vol['VolumeId']
         ebs_snap_id = vol['SnapshotId']
@@ -57,7 +57,6 @@ def ToLoadDataOntoFile(Datatoload):
         cost = 0
         cost1 = 0
         cost2 = 0
-        #print "Outer " + ebs_region + " " + ebs_volume_type
         for eachEbsrecord in CostingData:
             if ebs_region == eachEbsrecord.Region and ebs_volume_type == 'gp2':
                 if eachEbsrecord.Storage_Cost_OR_IOPS == 'Storage_Cost':
@@ -72,8 +71,18 @@ def ToLoadDataOntoFile(Datatoload):
                 if eachEbsrecord.Storage_Cost_OR_IOPS == 'Storage_Cost':
                     cost = eachEbsrecord.HDD_ST1
 
-        insertEbsStaticWithCost(ebsDataWithCosting(ebs_vid,ebs_snap_id,ebs_size,ebs_iops,ebs_region,ebs_state,ebs_create_date,ebs_volume_type,ebs_instance_id,                                                   ebs_device, ebs_attachment_state, ebs_attach_time,
-                                                   ebs_delete_on_termination, ebs_service, cost))
+        counter = counter + 1
+        record = ebsDataWithCosting(ebs_vid,ebs_snap_id,ebs_size,ebs_iops,ebs_region,ebs_state,ebs_create_date,
+                                    ebs_volume_type,ebs_instance_id,ebs_device, ebs_attachment_state, ebs_attach_time,
+                                    ebs_delete_on_termination, ebs_service, cost)
+        recordBuilder.append(record)
+
+        if 500 == counter:
+            insertEbsStaticWithCost(recordBuilder)
+            counter = 0
+            recordBuilder = []
+
+    insertEbsStaticWithCost(recordBuilder)
 
 
 
@@ -90,8 +99,10 @@ if __name__ == '__main__':
     DBsession = sessionmaker(bind=engine)
     session = DBsession()
     print "Creation table ebs_static_data"
-    ebsDataWithCosting.__table__.drop()
+    if engine.dialect.has_table(engine, ebsDataWithCosting.__tablename__):
+        ebsDataWithCosting.__table__.drop()
     ebsDataWithCosting.__table__.create()
+
     print 'getting Data of ebs_cost'
     CostingData = gettingEbsCosting(ModelClassName=ebsCosting)
 

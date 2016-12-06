@@ -18,6 +18,8 @@ def ToLoadDataOntoFile(Datatoload):
     # Initialize all the variable which will hold json values
     ListOfAllLoadBalancers = Datatoload['LoadBalancerDescriptions']  # getting all LoadBalancer
     print len(ListOfAllLoadBalancers)
+    counter = 0
+    recordBuilder = list()
     for LoadBalancer in ListOfAllLoadBalancers:
 
         LoadBalancerName = str(LoadBalancer['LoadBalancerName']) if 'LoadBalancerName' in LoadBalancer else ''
@@ -54,8 +56,19 @@ def ToLoadDataOntoFile(Datatoload):
             for k in range(len(list)):
                 SecurityGroups += list[k] + ' |'
 
-        session.add(elbModel(LoadBalancerName, DNSName, CanonicalHostedZoneName, CanonicalHostedZoneNameID, VPCId, Scheme,
-                    CreatedTime, AvailabilityZones,Subnets, InstanceId, SecurityGroups))
+        counter = counter + 1
+        record = elbModel(LoadBalancerName, DNSName, CanonicalHostedZoneName, CanonicalHostedZoneNameID, VPCId, Scheme,
+                    CreatedTime, AvailabilityZones,Subnets, InstanceId, SecurityGroups)
+        recordBuilder.append(record)
+
+        if 500 == counter:
+            session.bulk_save_objects(recordBuilder)
+            session.commit()
+            counter = 0
+            recordBuilder = []
+
+    session.bulk_save_objects(recordBuilder)
+    session.commit()
 
 if __name__ == '__main__':
     start_time = timeit.default_timer()

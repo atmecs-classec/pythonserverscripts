@@ -19,6 +19,8 @@ def ToLoadDataOntoFile(Datatoload):
     # Initialize all the variable which will hold json values
     ListOfAllInstances = Datatoload['DBInstances']
     print len(ListOfAllInstances)
+    counter = 0
+    recordBuilder = list()
     for Instance in ListOfAllInstances:
         DBInstanceIdentifier = str(Instance['DBInstanceIdentifier']) if 'DBInstanceIdentifier' in Instance else ''
         DBInstanceClass = str(Instance['DBInstanceClass']) if 'DBInstanceClass' in Instance else ''
@@ -62,10 +64,22 @@ def ToLoadDataOntoFile(Datatoload):
                     cost_On_Demand = eachRdsrecord.SQL_Server_On_Demand_cost
                     cost_On_Reserved = eachRdsrecord.SQL_Server_Reserved_cost
 
-                session.add(rdsDataWithCosting(DBInstanceIdentifier ,DBInstanceClass ,StorageType ,Engine ,EngineVersion,
+
+                counter = counter + 1
+                record = rdsDataWithCosting(DBInstanceIdentifier ,DBInstanceClass ,StorageType ,Engine ,EngineVersion,
                                                DBName, MultiAZ, AllocatedStorage, BackupRetentionPeriod,
                                                AvailabilityZone ,InstanceCreateTime ,ReadReplicaDBInstanceIdentifiers,
-                                               cost_On_Demand, cost_On_Reserved ))
+                                               cost_On_Demand, cost_On_Reserved )
+                recordBuilder.append(record)
+
+                if 500 == counter:
+                    session.bulk_save_objects(recordBuilder)
+                    session.commit()
+                    counter = 0
+                    recordBuilder = []
+
+            session.bulk_save_objects(recordBuilder)
+            session.commit()
 
 def gettingEc2Costing(ModelClassName=None):
     queryResult = session.query(ModelClassName).all()
