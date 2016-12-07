@@ -1,0 +1,46 @@
+FROM ubuntu:12.04
+
+# Set in what directory commands will run
+WORKDIR /home/app
+
+RUN apt-get update
+
+# Install software
+RUN apt-get install -y git
+RUN apt-get install -y python2.7
+RUN apt-get install -y python-pip 
+RUN apt-get install -y vim
+RUN apt-get install -y python-dev
+RUN apt-get install -y libmysqlclient-dev
+RUN pip install awscli
+
+#git configure
+
+RUN git config --global user.email "raju.guggilla@atmecs.com"
+RUN git config --global user.name "atmecs-classec"
+
+#clone the git repository 
+RUN git clone https://atmecs-classec:atmecs123@github.com/atmecs-classec/pythonserverscripts.git 
+
+# pull the latest code
+RUN cd /home/app/pythonserverscripts/classec && git pull
+
+# Put all our code inside that directory that lives in the container
+ADD . /home/app
+
+RUN mkdir $HOME/.aws
+COPY config /root/.aws/config
+RUN export AWS_CONFIG_FILE="`echo $HOME`/.aws/config"
+RUN chmod 600 $HOME/.aws/config
+
+# Install dependencies
+RUN cd /home/app
+RUN pip install --requirement pythonserverscripts/classec/requirements.txt
+
+
+# Tell Docker we are going to use this port
+EXPOSE 8001
+
+# The command to run our app when the container is run
+CMD ["python", "/home/app/pythonserverscripts/classec/server.py"]
+
